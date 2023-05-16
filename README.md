@@ -1,66 +1,145 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+Cara membuat export dari laravel ke excel :
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
 
-## About Laravel
+1. buat projek { composer create-project laravel/laravel example-app }
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+2. config database nya { samain nama database dengan yang ada di file .env }
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+3. install composer { composer require maatwebsite/excel --with-all-dependencies }
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+4. jangan lupa untuk me-register di config/app.php {
+    'providers' => [
+    /*
+     * Package Service Providers...
+     */
+    Maatwebsite\Excel\ExcelServiceProvider::class,
+]
+    'aliases' => [
+    ...
+    'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+]
+}
 
-## Learning Laravel
+5. publish confignya { php artisan vendor:publish --provider="Maatwebsite\Excel\ExcelServiceProvider" --tag=config
+ }
+nb : config ini otomatis akan membuat file yg bernama config/excel.php
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+6. membuat data dummy dari tinker {
+    php artisan tinker
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+    thinker User::factory()->count(500)->create()
+ }
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+7. tambahkan route(di file web.php) {
+    <?php
+  
+use Illuminate\Support\Facades\Route;
+  
+use App\Http\Controllers\ExportExcelController;
+  
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+ 
+Route::controller(ExportExcelController::class)->group(function(){
+    Route::get('/', 'index');    
+    Route::get('export/excel', 'export')->name('export.excel');
+});
+}
 
-## Laravel Sponsors
+8. membuat controller {
+    php artisan make:controller ExportExcelController
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+    lalu samakan dengan kode di bawah ini :
 
-### Premium Partners
+    <?php
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+namespace App\Http\Controllers;
 
-## Contributing
+use Illuminate\Http\Request;
+use App\Exports\ExportUsers;
+use Maatwebsite\Excel\Facades\Excel;
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+class ExportExcelController extends Controller
+{
+     public function index()
+    {
+       return view('index');
+    }
 
-## Code of Conduct
+    public function export() 
+    {
+        return Excel::download(new ExportUsers, 'users.xlsx');
+    }    
+}
+}
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+9. membuat export class {
+    php artisan make:export ExportUsers --model=User
 
-## Security Vulnerabilities
+    lalu samakan dengan kode dibawah ini :
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    <?php
 
-## License
+namespace App\Exports;
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+use App\User;
+use Maatwebsite\Excel\Concerns\FromCollection;
+
+class ExportUsers implements FromCollection
+{
+    /**
+    * @return \Illuminate\Support\Collection
+    */
+
+    public function collection()
+    {
+        return User::all();
+    }
+}
+}
+
+10. membuat file blade untuk view-nya {
+    untuk namanya bisa gunakan ; index.blade.php
+
+    dan untuk kodenya ada dibawah ini :
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>How To Export Excel File In Laravel 9 - Techsolutionstuff</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="container">
+	<h3>How To Export Excel File In Laravel 9 - Techsolutionstuff</h3>
+	<form action="#" method="POST" name="importform"
+	  enctype="multipart/form-data">
+		@csrf		
+		<div class="form-group">
+			<a class="btn btn-info" href="{{ route('export.excel') }}">Export Excel File</a>
+		</div> 
+	</form>
+</div>
+</body>
+</html>
+}
+
+11. jangan lupa untuk di run projectnya {
+    php artisan serve
+}
+
+Untuk yang ingin mengikuti dengan lebih lanjut kalian bisa melihat website ini ygy :
+https://techsolutionstuff.com/post/how-to-export-excel-file-in-laravel-9
+untuk install pakai composer require maatwebsite/excel --with-all-dependencies
+untuk bikin user pakai thinker User::factory()->count(500)->create()
